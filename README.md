@@ -27,6 +27,8 @@ The models are trained and evaluated on **MAGFiLO** (Manually Annotated GONG Fil
 - **Color Space:** Grayscale (not to be processed as RGB).
 - **Naming Convention:** Files are named sequentially as `YYYYMMDDHHMMSSII` (e.g., `20260901165702Bh.jpeg` encodes the capture date, time, and the Big Bear observatory code).
 
+![Training images examples](./images/1.png)
+
 **Annotation Details:**
 - **Format:** Ground-truth segmentations are stored as polygons in Run-Length Encoding (RLE) for storage efficiency (lossless conversion to binary masks).
 - **COCO Compatibility:** Annotations are structured in a COCO-style format, allowing seamless integration with the `pycocotools` library.
