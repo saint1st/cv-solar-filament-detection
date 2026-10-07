@@ -170,31 +170,19 @@ To prevent severe data leakage caused by near-identical frames and multiple over
 
 The project evolved from a full-image semantic segmentation baseline into a two-stage **YOLO → U-Net instance segmentation pipeline**. The main evaluation metric is **Panoptic Quality (PQ)** on the Kaggle leaderboard.
 
-### Kaggle Results
+### Kaggle Results Summary
 
-| # | Model / Method | Input / Resolution | Training / Inference Setup | Kaggle PQ |
-|---|---|---|---|---:|
-| 1 | **U-Net ResNet34** | Full 2048×2048 → 512×512 | BCE + Dice, thresholding + Connected Components | **0.01** |
-| 2 | **Oracle GT BBox + U-Net ResNet34** | GT crop → 512×512 | Ground-truth boxes used for cropping; masks pasted back to 2048×2048 | Local validation only |
-| 3 | **YOLO + U-Net ResNet34** | 2048 → YOLO 1280 → crop 512 | Two-stage detection + segmentation | **~0.30** |
-| 4 | **YOLO + U-Net EfficientNet-B4** | YOLO 1280 + crop 512 | Heavier segmentation backbone | **0.26** |
-| 5 | **YOLO + U-Net ResNet34 + TTA** | YOLO 1280 + crop 512 | Horizontal + vertical flip TTA | **~0.26** |
-| 6 | **YOLO + U-Net ResNet34 + Morphology** | YOLO 1280 + crop 512 | 5×5 morphological hole filling | **~0.26** |
-| 7 | **YOLO11M + U-Net ResNet34** | 1280 + crop 512 | 5-fold U-Net ensemble, confidence threshold 0.30 | **0.29** |
-| 8 | **YOLO11M, Fold 0** | 1280 | Single U-Net fold | **0.15** |
-| 9 | **YOLO11M, Fold 1** | 1280 | Single U-Net fold | **0.29** |
-| 10 | **YOLO11M, Fold 2** | 1280 | Single U-Net fold | **0.27** |
-| 11 | **YOLO11M, Fold 3** | 1280 | Single U-Net fold | **0.25** |
-| 12 | **YOLO11M, Fold 4** | 1280 | Single U-Net fold | **0.22** |
-| 13 | **YOLO11M + lower detector confidence** | 1280 | Confidence = 0.10 | **0.19** |
-| 14 | **YOLO11M + lower detector confidence** | 1280 | Confidence = 0.20 | **0.24** |
-| 15 | **YOLO11M + detector confidence** | 1280 | Confidence = 0.30 | **~0.29** |
-| 16 | **YOLO11M + detector confidence** | 1280 | Confidence = 0.35 | **0.28** |
-| 17 | **YOLO11L** | 1280 | 30 epochs, `optimizer=auto` | **0.26** |
-| 18 | **YOLO11L** | 1536 | 30 epochs, `optimizer=auto` | Not submitted |
-| 19 | **YOLO11L** | 2048 | 30 epochs, `optimizer=auto` | **0.25** |
-| 20 | **YOLO11L** | 1280 | 50 epochs, AdamW, LR = 1e-3 | **0.28** |
-| 21 | **YOLO11M tiled** | 1024×1024 tiles | 20% overlap, tiled training/inference | In progress |
+| # | Architecture / Strategy | Resolution & Setup | Key Configuration / Post-Processing | Kaggle PQ |
+|:--|:---|:---|:---|:---:|
+| 1 | **Baseline U-Net** | 2048 → 512 | BCE + Dice, Connected Components | **0.01** |
+| 2 | **Oracle GT BBox + U-Net** | GT crop → 512 | Upper-bound benchmark using ground-truth boxes | Local Val |
+| 3 | **Two-Stage (YOLO + U-Net)** | YOLO 1280 → crop 512 | Standard two-stage detection + segmentation pipeline | **~0.30** |
+| 4 | **YOLO + U-Net (EfficientNet-B4)** | YOLO 1280 + crop 512 | Heavier segmentation backbone | **0.26** |
+| 5 | **Two-Stage Variants (TTA / Morphology)** | YOLO 1280 + crop 512 | Tested Flip TTA & 5×5 morphological hole filling | **~0.26** |
+| 6 | **YOLO11M + U-Net (5-Fold Ensemble)** | 1280 + crop 512 | Ensemble across 5 folds (Fold scores: 0.15–0.29, Mean ~0.25) | **0.29** |
+| 7 | **Detector Confidence Sweep (YOLO11M)** | 1280 | Evaluated confidence thresholds: 0.10 (0.19), 0.20 (0.24), **0.30 (0.29)**, 0.35 (0.28) | **0.29** *(at conf=0.30)* |
+| 8 | **YOLO11L Scaling & Hyperparameters** | 1280 / 1536 / 2048 | Tested resolutions (1280/2048) and training epochs (30 vs 50 epochs, AdamW) | **0.28** *(best)* |
+| 9 | **YOLO11M Tiled Training** | 1024×1024 tiles | Tiled training/inference with 20% overlap | *In progress* |
 
 > **Best confirmed Kaggle score: ~0.30**
 
