@@ -160,11 +160,13 @@ To prevent severe data leakage caused by near-identical frames and multiple over
 
 
 ## Methodology
-> **Note for the reader:** Briefly summarize your specific approach here.
+> **Note for the reader:** We use a two-stage detection and segmentation pipeline designed to preserve the fine structure of solar filaments.
 
-- **Architecture:** Implemented a [insert model name, e.g., U-Net / YOLOv8] tailored for semantic segmentation of fine-scale structures.
-- **Preprocessing:** Applied [insert techniques] to suppress background noise and enhance image quality.
-- **Post-processing:** Leveraged [insert techniques, e.g., morphological operations] to enforce structural continuity and minimize over-merging.
+- **Architecture:** A **YOLO11M detector** first localizes filament instances on the full 2048×2048 image. Each detected region is then cropped with 20% padding and segmented using a **U-Net with a ResNet34 encoder**. Five fold-specific U-Net models are ensembled by averaging their predicted probability maps.
+
+- **Preprocessing:** Converted images to grayscale, isolated the solar disk using an intensity threshold, and applied **CLAHE** to enhance local contrast. Filament crops were resized to **512×512** for segmentation.
+
+- **Post-processing:** Applied probability thresholding and **Panoptic Painting** to resolve overlaps between predicted instances before converting the final masks to the required RLE format.
 
 ## Model & Experiment Summary
 
@@ -219,10 +221,3 @@ RLE submission
  8. Increasing YOLO resolution from 1280 to 2048 did not improve PQ.
  9. Training configuration matters: YOLO11L improved from 0.26 to 0.28 after changing the training schedule and optimizer.
  10. The current direction is tiled detection, aimed specifically at preserving spatial detail for small and thin filaments.
-
-## Evaluation Metrics
-The pipeline is evaluated based on the competition's strict criteria:
-- **Panoptic Quality (PQ):** The primary metric measuring both segmentation accuracy and instance recognition.
-- **Dice Score & IoU:** Utilized (`torchmetrics.segmentation.DiceScore`) to quantify the exact overlap between predicted and ground-truth masks.
-- **Fragmentation Penalties:** The evaluation penalizes one-to-many and many-to-one mapping errors.
-
