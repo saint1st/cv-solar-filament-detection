@@ -14,18 +14,26 @@ Filaments are highly volatile. When the magnetic fields holding them become unst
  - Overload and destroy electric power grids.
  - Disrupt GPS navigation and satellite communications.
  - Expose astronauts and passengers on high-altitude polar flights to dangerous levels of radiation.
-
-In computer vision, tracking them is exceptionally difficult. Filaments are not solid, geometric shapes. They feature barbs (thin, wispy threads branching off the main body) and often look fragmented or obscured by the background noise of ground-based telescopes. Your segmentation model is designed to accurately capture these complex, irregular boundaries pixel-by-pixel so scientists can monitor their stability.
-
 ## Overview
 This repository contains the source code and machine learning pipeline developed for the Kaggle challenge on [solar filament segmentation](https://www.kaggle.com/competitions/filament-segmentation-2026/overview). 
 
 The objective of this project is to generate highly accurate, pixel-level segmentation masks from H-Alpha solar observations. 
 
-Accurate detection of solar filaments is critical for space weather research, as they are at the core of solar eruptions such as Coronal Mass Ejections (CMEs) and solar flares.
-
 ## Dataset: MAGFiLO
-The models are trained and evaluated on **MAGFiLO** (Manually Annotated GONG Filaments from H-Alpha Observations). This dataset provides ground-truth segmentation masks created by expert human annotators. 
+The models are trained and evaluated on **MAGFiLO** (Manually Annotated GONG Filaments from H-Alpha Observations). 
+
+**Image Specifications:**
+- **Format:** 2048 × 2048 pixels, 8-bit JPEG.
+- **Color Space:** Grayscale (not to be processed as RGB).
+- **Naming Convention:** Files are named sequentially as `YYYYMMDDHHMMSSII` (e.g., `20260901165702Bh.jpeg` encodes the capture date, time, and the Big Bear observatory code).
+
+**Annotation Details:**
+- **Format:** Ground-truth segmentations are stored as polygons in Run-Length Encoding (RLE) for storage efficiency (lossless conversion to binary masks).
+- **COCO Compatibility:** Annotations are structured in a COCO-style format, allowing seamless integration with the `pycocotools` library.
+- **Multiple Annotators:** A single H-Alpha observation may contain multiple filaments, and the same image might be evaluated by different annotators independently. These instances are treated as distinct image records in the dataset.(This redundancy introduces overlapping and duplicate annotations into the training set)
+
+
+
 
 **Key Challenges Addressed:**
 - **Fine-scale structures:** Capturing thread-like features (barbs) that extend from the main filament body.
