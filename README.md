@@ -28,6 +28,13 @@ The models are trained and evaluated on **MAGFiLO** (Manually Annotated GONG Fil
 - **Naming Convention:** Files are named sequentially as `YYYYMMDDHHMMSSII` (e.g., `20260901165702Bh.jpeg` encodes the capture date, time, and the Big Bear observatory code).
 
 ![Training images examples](./images/1.png)
+![Training images examples](./images/2.png)
+
+![Training images examples](./images/duplicate1.png)
+![Training images examples](./images/duplicate2.png)
+
+![Training images examples](./images/fusion_result1.png)
+
 
 **Annotation Details:**
 - **Format:** Ground-truth segmentations are stored as polygons in Run-Length Encoding (RLE) for storage efficiency (lossless conversion to binary masks).
