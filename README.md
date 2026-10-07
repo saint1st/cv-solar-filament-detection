@@ -27,8 +27,8 @@ The models are trained and evaluated on **MAGFiLO** (Manually Annotated GONG Fil
 - **Color Space:** Grayscale (not to be processed as RGB).
 - **Naming Convention:** Files are named sequentially as `YYYYMMDDHHMMSSII` (e.g., `20260901165702Bh.jpeg` encodes the capture date, time, and the Big Bear observatory code).
 
-![Training images examples](./images/1.png){width=70% fig-align="center"}
-![Training images examples](./images/2.png){width=70% fig-align="center"}
+![Training images examples](./images/1.png){width=50% fig-align="center"}
+![Training images examples](./images/2.png){width=50% fig-align="center"}
 
 
 **Annotation Details:**
