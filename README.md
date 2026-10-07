@@ -27,8 +27,38 @@ The models are trained and evaluated on **MAGFiLO** (Manually Annotated GONG Fil
 - **Color Space:** Grayscale (not to be processed as RGB).
 - **Naming Convention:** Files are named sequentially as `YYYYMMDDHHMMSSII` (e.g., `20260901165702Bh.jpeg` encodes the capture date, time, and the Big Bear observatory code).
 
+Dataset contains 1154 photos with 8199 annotations.The very thin filament samples are only 6 which are less than 5 pixels.
+
+| Percentile | Area (pixels) | Description / Interpretation |
+| :--- | :---: | :--- |
+| **$P_1$** | 209 px | Lower bound (excluding extreme outliers) |
+| **$P_5$** | 317 px | Very small structures |
+| **$P_{10}$** | 410 px | Small filament threshold |
+| **$P_{25}$** | 670 px | Lower quartile ($Q_1$) |
+| **$P_{50}$ (Median)** | 1,228 px | Typical filament size |
+| **$P_{75}$** | 2,438 px | Upper quartile ($Q_3$) |
+| **$P_{90}$** | 4,685 px | Large structures |
+| **$P_{95}$** | 6,947 px | Very large structures |
+| **$P_{99}$** | 13,703 px | Upper bound (excluding extreme maximums up to 37,739 px) |
+
+Exploratory Data Analysis (EDA) revealed a wide filament area distribution ranging from 9 to 37,739 pixels, with the upper bound acting as a sparse outlier. This granular scale characterization directly informed my pipeline design:
+
+1. **Receptive Field Selection:** The presence of large structures up to ~37k pixels necessitated architectures capable of capturing broad context, guiding our choice toward dense prediction models with large receptive fields, such as U-Net.
+2. **Avoiding Resolution Loss:** Analyzing the size distribution proved critical in preventing suboptimal preprocessing choices. Since native H-Alpha images are 2048×2048 pixels, aggressive downscaling (e.g., resizing to 640×640, commonly used in object detection pipelines) would severely compress small targets—such as $P_1$ instances around 209 pixels—leading to an irreversible loss of fine-scale morphological details (e.g., filament barbs). Preserving high-resolution inputs was therefore essential for accurate segmentation.
+
+![Number of annotations per image](./images/filaments_number_distribution.png)
+
+| Metric / Interaction Type | Count / Statistics | Percentage / Proportion |
+| :--- | :---: | :---: |
+| **Total images with $\ge 2$ filaments** | 1,051 | 91.1% |
+| **Images with overlapping masks** (Pixel IoU $> 0$) | 7 | 0.6% |
+| **Images with touching masks** (1–2 px border boundary) | 8 | 0.7% |
+| **Total overlapping instance pairs** | 7 | 7 / 36,064 pairs |
+| **Total touching instance pairs** | 9 | 9 / 36,064 pairs |
+
 ![Training images examples](./images/1.png)
 ![Training images examples](./images/2.png)
+
 
 ![Training images examples](./images/duplicate1.png)
 ![Training images examples](./images/duplicate2.png)
