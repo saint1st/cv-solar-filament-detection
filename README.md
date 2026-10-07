@@ -31,6 +31,12 @@ The models are trained and evaluated on **MAGFiLO** (Manually Annotated GONG Fil
 ![Training images examples](./images/2.png)
 
 
+**Annotation Details:**
+- **Format:** Ground-truth segmentations are stored as polygons in Run-Length Encoding (RLE) for storage efficiency (lossless conversion to binary masks).
+- **Multiple Annotators:** A single H-Alpha observation may contain multiple filaments, and the same image might be evaluated by different annotators independently. These instances are treated as distinct image records in the dataset.(This redundancy introduces overlapping and duplicate annotations into the training set)
+
+## Exploratory Data Analysis
+
 Dataset contains **1154 photos with 8199 annotations**.The very thin filament samples are only 6 which are less than 5 pixels.
 
 | Percentile | Area (pixels) | Description / Interpretation |
@@ -149,26 +155,9 @@ To prevent severe data leakage caused by near-identical frames and multiple over
 
 ![Training images examples](./images/duplicate1.png)
 ![Training images examples](./images/duplicate2.png)
-
+*As a result of this pipeline, the final clean and fused annotations were successfully serialized into `MAGFiLO_1.0_Annotations_kaggle2026_train_fused_deduplicated.json` for subsequent model training.*
 ![Training images examples](./images/fusion_result1.png)
 
-
-
-
-
-
-**Annotation Details:**
-- **Format:** Ground-truth segmentations are stored as polygons in Run-Length Encoding (RLE) for storage efficiency (lossless conversion to binary masks).
-- **COCO Compatibility:** Annotations are structured in a COCO-style format, allowing seamless integration with the `pycocotools` library.
-- **Multiple Annotators:** A single H-Alpha observation may contain multiple filaments, and the same image might be evaluated by different annotators independently. These instances are treated as distinct image records in the dataset.(This redundancy introduces overlapping and duplicate annotations into the training set)
-
-
-
-
-**Key Challenges Addressed:**
-- **Fine-scale structures:** Capturing thread-like features (barbs) that extend from the main filament body.
-- **Background noise:** Distinguishing filament material from imaging artifacts inherent to ground-based observatories.
-- **Structural continuity:** Preventing fragmented segmentations and ensuring contiguous physical representations of filament morphology.
 
 ## Methodology
 > **Note for the reader:** Briefly summarize your specific approach here.
