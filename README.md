@@ -27,8 +27,8 @@ The models are trained and evaluated on **MAGFiLO** (Manually Annotated GONG Fil
 - **Color Space:** Grayscale (not to be processed as RGB).
 - **Naming Convention:** Files are named sequentially as `YYYYMMDDHHMMSSII` (e.g., `20260901165702Bh.jpeg` encodes the capture date, time, and the Big Bear observatory code).
 
-![Training images examples](./images/1.png)
-![Training images examples](./images/2.png)
+![Training images examples](./images/1.png){width=70% fig-align="center"}
+![Training images examples](./images/2.png){width=70% fig-align="center"}
 
 
 **Annotation Details:**
@@ -56,7 +56,7 @@ Exploratory Data Analysis (EDA) revealed a wide filament area distribution rangi
 1. **Receptive Field Selection:** The presence of large structures up to ~37k pixels necessitated architectures capable of capturing broad context, guiding our choice toward dense prediction models with large receptive fields, such as U-Net.
 2. **Avoiding Resolution Loss:** Analyzing the size distribution proved critical in preventing suboptimal preprocessing choices. Since native H-Alpha images are 2048×2048 pixels, aggressive downscaling (e.g., resizing to 640×640, commonly used in object detection pipelines) would severely compress small targets—such as $P_1$ instances around 209 pixels—leading to an irreversible loss of fine-scale morphological details (e.g., filament barbs). Preserving high-resolution inputs was therefore essential for accurate segmentation.
 
-![Number of annotations per image](./images/filaments_number_distribution.png)
+![Number of annotations per image](./images/filaments_number_distribution.png){width=70% fig-align="center"}
 
 | Metric / Interaction Type | Count / Statistics | Percentage / Proportion |
 | :--- | :---: | :---: |
@@ -69,9 +69,9 @@ Exploratory Data Analysis (EDA) revealed a wide filament area distribution rangi
 
 To evaluate the structural characteristics of solar filaments, I conducted a geometric analysis of individual instances, calculating metrics such as **Solidity** (the ratio of the filament mask area to its convex hull area) and performing **skeletonization** to extract core spines and branching features.
 
-![Geometrical mask analysis](./images/geometry1.png)
-![Geometrical mask analysis](./images/geometry2.png)
-![Geometrical mask analysis](./images/geometry3.png)
+![Geometrical mask analysis](./images/geometry1.png){width=70% fig-align="center"}
+![Geometrical mask analysis](./images/geometry2.png){width=70% fig-align="center"}
+![Geometrical mask analysis](./images/geometry3.png){width=70% fig-align="center"}
 
 As illustrated in the exploratory analysis:
 - **Branching and Barbs:** The skeletonization overlays (Panel 3) clearly capture fine thread-like structures and secondary branches (barbs) extending from the primary spine. These features are critical for solar physics research but pose significant challenges for standard segmentation networks due to their thin profiles.
@@ -90,7 +90,7 @@ As illustrated in the exploratory analysis:
 | **95%** | 7,336.7 | 3.34 | 1,026.6 | 0.89 | 487.1 |
 | **Max** | 39,145.0 | 12.78 | 3,047.5 | 1.00 | 1,777.0 |
 
-![Training images examples](./images/output.png)
+![Training images examples](./images/output.png){width=70% fig-align="center"}
 
 To further investigate dataset characteristics, we performed bivariate log-log scale analyses correlating mask area with aspect ratio and skeleton length (as shown above):
 
@@ -108,14 +108,14 @@ An analysis of foreground occupancy per image ($2048 \times 2048 = 4,194,304$ to
 
 - **The Problem:** Using standard Binary Cross-Entropy (BCE) loss alone causes the model to collapse by trivially predicting all-background masks.
 - **The Solution:** We employed composite loss functions combining BCE with regional/overlap metrics—such as **BCE+Dice**, **BCE+Tversky**, or **Focal+Dice**.
-![Training images examples](./images/pixel_occupancy.png)
+![Training images examples](./images/pixel_occupancy.png){width=70% fig-align="center"}
 
 Sampling intensity distributions ($N = 100$ images) across the 0–255 grayscale range demonstrated significant intensity overlap between background pixels and ground-truth filaments.
 
 - **Background vs. Foreground:** While the sharp spike near intensity 0 represents the black space vacuum outside the solar disk, filament pixel intensities heavily overlap with the broader solar disk background (Mean ~83 for background vs. ~117 for filaments).
 - **Failure of Thresholding:** This significant overlap proves that global thresholding methods (like Otsu's method) or traditional edge detectors (like Canny) are entirely ineffective.
 - **Preprocessing Strategy:** Consequently, we integrated **CLAHE (Contrast Limited Adaptive Histogram Equalization)** to boost local edge definitions prior to model training.
-![Training images examples](./images/intencity.png)
+![Training images examples](./images/intencity.png){width=70% fig-align="center"}
 
 
 Temporal Analysis & Sampling Distribution
@@ -138,7 +138,7 @@ To ensure that the training set shares the same underlying photometric distribut
 - **ROC-AUC Score:** **0.559**
 - **Interpretation:** A score close to 0.50 indicates that the classifier is essentially guessing at random and cannot reliably differentiate between training and test frames. 
 - **Conclusion:** **No severe covariate shift was detected.** As confirmed by the overlapping feature histograms (Mean and Std Intensity), the training and test sets are identically distributed, ensuring that models trained on the training split will generalize reliably to the test environment.
-![Training images examples](./images/std.png)
+![Training images examples](./images/std.png){width=70% fig-align="center"}
 
 
 Duplicate Analysis & Annotation Fusion
@@ -153,10 +153,10 @@ An exhaustive duplicate analysis using byte-level MD5 hashing and timestamp pref
 ### Validation Strategy (GroupKFold)
 To prevent severe data leakage caused by near-identical frames and multiple overlapping annotations crossing over between cross-validation folds, a unified `group_id` mapping was generated and saved to `train_image_groups.csv`. Using `group_id` for **GroupKFold** ensures that duplicate or temporally correlated captures are strictly kept within the same fold during training and evaluation.
 
-![Training images examples](./images/duplicate1.png)
-![Training images examples](./images/duplicate2.png)
+![Training images examples](./images/duplicate1.png){width=70% fig-align="center"}
+![Training images examples](./images/duplicate2.png){width=70% fig-align="center"}
 *As a result of this pipeline, the final clean and fused annotations were successfully serialized into `MAGFiLO_1.0_Annotations_kaggle2026_train_fused_deduplicated.json` for subsequent model training.*
-![Training images examples](./images/fusion_result1.png)
+![Training images examples](./images/fusion_result1.png){width=70% fig-align="center"}
 
 
 ## Methodology
