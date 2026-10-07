@@ -31,7 +31,7 @@ The models are trained and evaluated on **MAGFiLO** (Manually Annotated GONG Fil
 ![Training images examples](./images/2.png)
 
 
-Dataset contains 1154 photos with 8199 annotations.The very thin filament samples are only 6 which are less than 5 pixels.
+Dataset contains **1154 photos with 8199 annotations**.The very thin filament samples are only 6 which are less than 5 pixels.
 
 | Percentile | Area (pixels) | Description / Interpretation |
 | :--- | :---: | :--- |
@@ -98,11 +98,63 @@ To further investigate dataset characteristics, we performed bivariate log-log s
    Analyzing the coverage percentage of filaments per image helps quantify the severe pixel-level class imbalance (where the background vastly dominates over thin filament pixels), guiding our choice of loss functions (e.g., a combination of Dice Loss and Binary Cross-Entropy) to prevent the model from collapsing into predicting all-background masks.
 
 
+An analysis of foreground occupancy per image ($2048 \times 2048 = 4,194,304$ total pixels) revealed that filaments occupy a mere **~0.30%** on average (~12,600 foreground pixels versus 4.18 million background pixels).
+
+- **The Problem:** Using standard Binary Cross-Entropy (BCE) loss alone causes the model to collapse by trivially predicting all-background masks.
+- **The Solution:** We employed composite loss functions combining BCE with regional/overlap metrics—such as **BCE+Dice**, **BCE+Tversky**, or **Focal+Dice**.
+![Training images examples](./images/pixel_occupancy.png)
+
+Sampling intensity distributions ($N = 100$ images) across the 0–255 grayscale range demonstrated significant intensity overlap between background pixels and ground-truth filaments.
+
+- **Background vs. Foreground:** While the sharp spike near intensity 0 represents the black space vacuum outside the solar disk, filament pixel intensities heavily overlap with the broader solar disk background (Mean ~83 for background vs. ~117 for filaments).
+- **Failure of Thresholding:** This significant overlap proves that global thresholding methods (like Otsu's method) or traditional edge detectors (like Canny) are entirely ineffective.
+- **Preprocessing Strategy:** Consequently, we integrated **CLAHE (Contrast Limited Adaptive Histogram Equalization)** to boost local edge definitions prior to model training.
+![Training images examples](./images/intencity.png)
+
+
+Temporal Analysis & Sampling Distribution
+
+An analysis of image timestamps extracted from filenames ($\text{YYYYMMDDHHMMSSII}$) revealed the temporal structure of the dataset:
+
+- **Dataset Scale:** 1,154 total images spanning 656 unique observation days, with a date range from January 9, 2011, to August 3, 2022.
+- **Time Deltas:** The median time interval between sequential frames is 1,440 minutes (24 hours). However, **39.5% of frames (456 instances) were captured less than 15 minutes apart**. 
+- **Implication for Validation Strategy:** High temporal proximity between consecutive frames implies potential correlation leakage. To prevent data leakage during model training, validation splits must be grouped by observation day/session rather than sampled randomly.
+
+Covariate Shift & Adversarial Validation
+
+To ensure that the training set shares the same underlying photometric distribution as the test set, we performed an **Adversarial Validation** experiment. 
+
+### Methodology
+1. **Feature Extraction:** Extracted low-level image intensity statistics (mean, standard deviation, and percentiles $P_1, P_50, P_99$) from all training and test images.
+2. **Classifier Training:** Trained a Random Forest classifier to distinguish between train ($y=0$) and test ($y=1$) samples using 5-fold cross-validation.
+
+### Results
+- **ROC-AUC Score:** **0.559**
+- **Interpretation:** A score close to 0.50 indicates that the classifier is essentially guessing at random and cannot reliably differentiate between training and test frames. 
+- **Conclusion:** **No severe covariate shift was detected.** As confirmed by the overlapping feature histograms (Mean and Std Intensity), the training and test sets are identically distributed, ensuring that models trained on the training split will generalize reliably to the test environment.
+![Training images examples](./images/std.png)
+
+
+Duplicate Analysis & Annotation Fusion
+
+An exhaustive duplicate analysis using byte-level MD5 hashing and timestamp prefix matching revealed significant redundancy in the dataset.
+
+### Summary of Findings
+- **Exact MD5 Byte-Level Duplicates:** 743 images mapped across 296 unique groups.
+- **Identical Timestamp Prefixes:** 743 images matching across 296 unique groups, indicating that multiple records shared identical raw data.
+- **Dataset Cleansing (Annotation Fusion):** By fusing annotations across duplicate image records and selecting a primary clean frame for each hash group, the training dataset was successfully condensed from **1,154 raw images down to 707 clean, unique frames** while preserving all 8,199 filament annotations.
+
+### Validation Strategy (GroupKFold)
+To prevent severe data leakage caused by near-identical frames and multiple overlapping annotations crossing over between cross-validation folds, a unified `group_id` mapping was generated and saved to `train_image_groups.csv`. Using `group_id` for **GroupKFold** ensures that duplicate or temporally correlated captures are strictly kept within the same fold during training and evaluation.
 
 ![Training images examples](./images/duplicate1.png)
 ![Training images examples](./images/duplicate2.png)
 
 ![Training images examples](./images/fusion_result1.png)
+
+
+
+
 
 
 **Annotation Details:**
