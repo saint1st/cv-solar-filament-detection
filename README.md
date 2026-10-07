@@ -1,0 +1,235 @@
+# cv-solar-filament-detection
+A machine learning pipeline for solar filament detection, built as part of a Kaggle competition
+
+# Solar Filaments Segmentation Challenge
+
+Solar filaments are dense, relatively cool "clouds" of solar material (plasma) that are suspended above the Sun's surface by powerful magnetic field lines.
+
+1. The Visual Appearance
+Even though they are extremely hot, filaments are cooler than the solar surface (photosphere) below them. When viewed through specific wavelengths (like the H-Alpha observations in the MAGFiLO dataset), they absorb the light from below and appear as dark, thread-like streaks or ribbons across the Sun's bright disk. If you view a filament on the edge of the Sun against the blackness of space, it glows bright red—in that position, it is called a solar prominence.
+
+2. The Danger (Space Weather)
+Filaments are highly volatile. When the magnetic fields holding them become unstable, they can erupt, violently throwing billions of tons of plasma into space. This is known as a Coronal Mass Ejection (CME). If an Earth-directed CME hits our magnetic field, it can:
+
+ - Overload and destroy electric power grids.
+ - Disrupt GPS navigation and satellite communications.
+ - Expose astronauts and passengers on high-altitude polar flights to dangerous levels of radiation.
+## Overview
+This repository contains the source code and machine learning pipeline developed for the Kaggle challenge on [solar filament segmentation](https://www.kaggle.com/competitions/filament-segmentation-2026/overview). 
+
+The objective of this project is to generate highly accurate, pixel-level segmentation masks from H-Alpha solar observations. 
+
+## Dataset: MAGFiLO
+The models are trained and evaluated on **MAGFiLO** (Manually Annotated GONG Filaments from H-Alpha Observations). 
+
+**Image Specifications:**
+- **Format:** 2048 × 2048 pixels, 8-bit JPEG.
+- **Color Space:** Grayscale (not to be processed as RGB).
+- **Naming Convention:** Files are named sequentially as `YYYYMMDDHHMMSSII` (e.g., `20260901165702Bh.jpeg` encodes the capture date, time, and the Big Bear observatory code).
+
+![Training images examples](./images/1.png){width=50% fig-align="center"}
+![Training images examples](./images/2.png){width=50% fig-align="center"}
+
+
+**Annotation Details:**
+- **Format:** Ground-truth segmentations are stored as polygons in Run-Length Encoding (RLE) for storage efficiency (lossless conversion to binary masks).
+- **Multiple Annotators:** A single H-Alpha observation may contain multiple filaments, and the same image might be evaluated by different annotators independently. These instances are treated as distinct image records in the dataset.(This redundancy introduces overlapping and duplicate annotations into the training set)
+
+## Exploratory Data Analysis
+
+Dataset contains **1154 photos with 8199 annotations**.The very thin filament samples are only 6 which are less than 5 pixels.
+
+| Percentile | Area (pixels) | Description / Interpretation |
+| :--- | :---: | :--- |
+| **$P_1$** | 209 px | Lower bound (excluding extreme outliers) |
+| **$P_5$** | 317 px | Very small structures |
+| **$P_{10}$** | 410 px | Small filament threshold |
+| **$P_{25}$** | 670 px | Lower quartile ($Q_1$) |
+| **$P_{50}$ (Median)** | 1,228 px | Typical filament size |
+| **$P_{75}$** | 2,438 px | Upper quartile ($Q_3$) |
+| **$P_{90}$** | 4,685 px | Large structures |
+| **$P_{95}$** | 6,947 px | Very large structures |
+| **$P_{99}$** | 13,703 px | Upper bound (excluding extreme maximums up to 37,739 px) |
+
+Exploratory Data Analysis (EDA) revealed a wide filament area distribution ranging from 9 to 37,739 pixels, with the upper bound acting as a sparse outlier. This granular scale characterization directly informed my pipeline design:
+
+1. **Receptive Field Selection:** The presence of large structures up to ~37k pixels necessitated architectures capable of capturing broad context, guiding our choice toward dense prediction models with large receptive fields, such as U-Net.
+2. **Avoiding Resolution Loss:** Analyzing the size distribution proved critical in preventing suboptimal preprocessing choices. Since native H-Alpha images are 2048×2048 pixels, aggressive downscaling (e.g., resizing to 640×640, commonly used in object detection pipelines) would severely compress small targets—such as $P_1$ instances around 209 pixels—leading to an irreversible loss of fine-scale morphological details (e.g., filament barbs). Preserving high-resolution inputs was therefore essential for accurate segmentation.
+
+<img src="./images/filaments_number_distribution.png" alt="Training images examples" width="600">
+
+| Metric / Interaction Type | Count / Statistics | Percentage / Proportion |
+| :--- | :---: | :---: |
+| **Total images with $\ge 2$ filaments** | 1,051 | 91.1% |
+| **Images with overlapping masks** (Pixel IoU $> 0$) | 7 | 0.6% |
+| **Images with touching masks** (1–2 px border boundary) | 8 | 0.7% |
+| **Total overlapping instance pairs** | 7 | 7 / 36,064 pairs |
+| **Total touching instance pairs** | 9 | 9 / 36,064 pairs |
+
+
+To evaluate the structural characteristics of solar filaments, I conducted a geometric analysis of individual instances, calculating metrics such as **Solidity** (the ratio of the filament mask area to its convex hull area) and performing **skeletonization** to extract core spines and branching features.
+
+
+![Geometrical mask analysis](./images/geometry1.png){width=70% fig-align="center"}
+![Geometrical mask analysis](./images/geometry2.png){width=70% fig-align="center"}
+![Geometrical mask analysis](./images/geometry3.png){width=70% fig-align="center"}
+
+As illustrated in the exploratory analysis:
+- **Branching and Barbs:** The skeletonization overlays (Panel 3) clearly capture fine thread-like structures and secondary branches (barbs) extending from the primary spine. These features are critical for solar physics research but pose significant challenges for standard segmentation networks due to their thin profiles.
+- **Irregular Geometries:** The low solidity values observed—ranging from **0.59 to 0.74** across samples—confirm that solar filaments are highly non-convex, elongated, and irregular structures rather than solid geometric blobs (Panel 4). This structural complexity demonstrates why standard bounding-box object detection or simple thresholding fails, necessitating robust pixel-level semantic segmentation models.
+
+| Statistic | Area (px) | Aspect Ratio | Perimeter (px) | Solidity | Skeleton Length (px) |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Count** | 8,199 | 8,199 | 8,199 | 8,199 | 8,199 |
+| **Mean** | 2,282.9 | 1.38 | 390.2 | 0.58 | 176.1 |
+| **Std** | 2,860.4 | 1.03 | 318.5 | 0.18 | 158.3 |
+| **Min** | 6.0 | 0.12 | 6.8 | 0.10 | 3.0 |
+| **5%** | 354.0 | 0.33 | 105.6 | 0.28 | 37.0 |
+| **25% ($Q_1$)** | 745.5 | 0.66 | 183.3 | 0.45 | 74.0 |
+| **50% (Median)** | 1,355.0 | 1.11 | 292.4 | 0.58 | 127.0 |
+| **75% ($Q_3$)** | 2,638.0 | 1.79 | 488.1 | 0.71 | 221.0 |
+| **95%** | 7,336.7 | 3.34 | 1,026.6 | 0.89 | 487.1 |
+| **Max** | 39,145.0 | 12.78 | 3,047.5 | 1.00 | 1,777.0 |
+
+
+<img src="./images/output.png" alt="Training images examples" width="600">
+To further investigate dataset characteristics, we performed bivariate log-log scale analyses correlating mask area with aspect ratio and skeleton length (as shown above):
+
+1. **Area vs. Aspect Ratio (Symmetry & Orientation):**
+   The scatter plot demonstrates a balanced, roughly symmetric distribution of aspect ratios centered around 1.0 on a logarithmic scale. This indicates an unbiased orientation of solar filaments across the solar disk—meaning filaments are equally likely to extend horizontally or vertically, with no directional artifacts introduced during annotation.
+
+2. **Area vs. Skeleton Length (Strong Linear Correlation):**
+   A strict linear correlation is observed between the filament mask area and its corresponding skeleton length in log-log space. This consistent scaling relationship provides a powerful heuristic for **False Positive Mitigation**: any predicted mask whose area-to-skeleton ratio deviates drastically from this empirical distribution can be automatically flagged and filtered out as a morphological anomaly or noise.
+
+3. **Pixel-Level Class Imbalance Evaluation:**
+   Analyzing the coverage percentage of filaments per image helps quantify the severe pixel-level class imbalance (where the background vastly dominates over thin filament pixels), guiding our choice of loss functions (e.g., a combination of Dice Loss and Binary Cross-Entropy) to prevent the model from collapsing into predicting all-background masks.
+
+
+An analysis of foreground occupancy per image ($2048 \times 2048 = 4,194,304$ total pixels) revealed that filaments occupy a mere **~0.30%** on average (~12,600 foreground pixels versus 4.18 million background pixels).
+
+- **The Problem:** Using standard Binary Cross-Entropy (BCE) loss alone causes the model to collapse by trivially predicting all-background masks.
+- **The Solution:** We employed composite loss functions combining BCE with regional/overlap metrics—such as **BCE+Dice**, **BCE+Tversky**, or **Focal+Dice**.
+
+<img src="./images/pixel_occupancy.png" alt="Training images examples" width="600">
+
+Sampling intensity distributions ($N = 100$ images) across the 0–255 grayscale range demonstrated significant intensity overlap between background pixels and ground-truth filaments.
+
+- **Background vs. Foreground:** While the sharp spike near intensity 0 represents the black space vacuum outside the solar disk, filament pixel intensities heavily overlap with the broader solar disk background (Mean ~83 for background vs. ~117 for filaments).
+- **Failure of Thresholding:** This significant overlap proves that global thresholding methods (like Otsu's method) or traditional edge detectors (like Canny) are entirely ineffective.
+- **Preprocessing Strategy:** Consequently, we integrated **CLAHE (Contrast Limited Adaptive Histogram Equalization)** to boost local edge definitions prior to model training.
+
+<img src="./images/intencity.png" alt="Training images examples" width="600">
+
+Temporal Analysis & Sampling Distribution
+
+An analysis of image timestamps extracted from filenames ($\text{YYYYMMDDHHMMSSII}$) revealed the temporal structure of the dataset:
+
+- **Dataset Scale:** 1,154 total images spanning 656 unique observation days, with a date range from January 9, 2011, to August 3, 2022.
+- **Time Deltas:** The median time interval between sequential frames is 1,440 minutes (24 hours). However, **39.5% of frames (456 instances) were captured less than 15 minutes apart**. 
+- **Implication for Validation Strategy:** High temporal proximity between consecutive frames implies potential correlation leakage. To prevent data leakage during model training, validation splits must be grouped by observation day/session rather than sampled randomly.
+
+Covariate Shift & Adversarial Validation
+
+To ensure that the training set shares the same underlying photometric distribution as the test set, we performed an **Adversarial Validation** experiment. 
+
+1. **Feature Extraction:** Extracted low-level image intensity statistics (mean, standard deviation, and percentiles $P_1, P_50, P_99$) from all training and test images.
+2. **Classifier Training:** Trained a Random Forest classifier to distinguish between train ($y=0$) and test ($y=1$) samples using 5-fold cross-validation.
+
+### Results
+- **ROC-AUC Score:** **0.559**
+- **Interpretation:** A score close to 0.50 indicates that the classifier is essentially guessing at random and cannot reliably differentiate between training and test frames. 
+- **Conclusion:** **No severe covariate shift was detected.** As confirmed by the overlapping feature histograms (Mean and Std Intensity), the training and test sets are identically distributed, ensuring that models trained on the training split will generalize reliably to the test environment.
+
+<img src="./images/std.png" alt="Training images examples" width="600">
+
+Duplicate Analysis & Annotation Fusion
+
+An exhaustive duplicate analysis using byte-level MD5 hashing and timestamp prefix matching revealed significant redundancy in the dataset.
+
+- **Exact MD5 Byte-Level Duplicates:** 743 images mapped across 296 unique groups.
+- **Identical Timestamp Prefixes:** 743 images matching across 296 unique groups, indicating that multiple records shared identical raw data.
+- **Dataset Cleansing (Annotation Fusion):** By fusing annotations across duplicate image records and selecting a primary clean frame for each hash group, the training dataset was successfully condensed from **1,154 raw images down to 707 clean, unique frames** while preserving all 8,199 filament annotations.
+
+### Validation Strategy (GroupKFold)
+To prevent severe data leakage caused by near-identical frames and multiple overlapping annotations crossing over between cross-validation folds, a unified `group_id` mapping was generated and saved to `train_image_groups.csv`. Using `group_id` for **GroupKFold** ensures that duplicate or temporally correlated captures are strictly kept within the same fold during training and evaluation.
+
+![Training images examples](./images/duplicate1.png){width=70% fig-align="center"}
+![Training images examples](./images/duplicate2.png){width=70% fig-align="center"}
+*As a result of this pipeline, the final clean and fused annotations were successfully serialized into `MAGFiLO_1.0_Annotations_kaggle2026_train_fused_deduplicated.json` for subsequent model training.*
+![Training images examples](./images/fusion_result1.png){width=70% fig-align="center"}
+
+
+## Methodology
+> **Note for the reader:** We use a two-stage detection and segmentation pipeline designed to preserve the fine structure of solar filaments.
+
+- **Architecture:** A **YOLO11M detector** first localizes filament instances on the full 2048×2048 image. Each detected region is then cropped with 20% padding and segmented using a **U-Net with a ResNet34 encoder**. Five fold-specific U-Net models are ensembled by averaging their predicted probability maps.
+
+- **Preprocessing:** Converted images to grayscale, isolated the solar disk using an intensity threshold, and applied **CLAHE** to enhance local contrast. Filament crops were resized to **512×512** for segmentation.
+
+- **Post-processing:** Applied probability thresholding and **Panoptic Painting** to resolve overlaps between predicted instances before converting the final masks to the required RLE format.
+
+## Model & Experiment Summary
+
+The project evolved from a full-image semantic segmentation baseline into a two-stage **YOLO → U-Net instance segmentation pipeline**. The main evaluation metric is **Panoptic Quality (PQ)** on the Kaggle leaderboard.
+
+### Kaggle Results Summary
+
+| # | Architecture / Strategy | Resolution & Setup | Key Configuration / Post-Processing | Kaggle PQ |
+|:--|:---|:---|:---|:---:|
+| 1 | **Baseline U-Net** | 2048 → 512 | BCE + Dice, Connected Components | **0.01** |
+| 2 | **Oracle GT BBox + U-Net** | GT crop → 512 | Upper-bound benchmark using ground-truth boxes | Local Val |
+| 3 | **Two-Stage (YOLO + U-Net)** | YOLO 1280 → crop 512 | Standard two-stage detection + segmentation pipeline | **~0.30** |
+| 4 | **YOLO + U-Net (EfficientNet-B4)** | YOLO 1280 + crop 512 | Heavier segmentation backbone | **0.26** |
+| 5 | **Two-Stage Variants (TTA / Morphology)** | YOLO 1280 + crop 512 | Tested Flip TTA & 5×5 morphological hole filling | **~0.26** |
+| 6 | **YOLO11M + U-Net (5-Fold Ensemble)** | 1280 + crop 512 | Ensemble across 5 folds (Fold scores: 0.15–0.29, Mean ~0.25) | **0.29** |
+| 7 | **Detector Confidence Sweep (YOLO11M)** | 1280 | Evaluated confidence thresholds: 0.10 (0.19), 0.20 (0.24), **0.30 (0.29)**, 0.35 (0.28) | **0.29** *(at conf=0.30)* |
+| 8 | **YOLO11L Scaling & Hyperparameters** | 1280 / 1536 / 2048 | Tested resolutions (1280/2048) and training epochs (30 vs 50 epochs, AdamW) | **0.28** *(best)* |
+| 9 | **YOLO11M Tiled Training** | 1024×1024 tiles | Tiled training/inference with 20% overlap | *In progress* |
+
+> **Best confirmed Kaggle score: ~0.30**
+
+<img src="./images/pipeline.png" alt="Training images examples">
+
+
+The best-performing configuration used **full-image YOLO11M detection** rather than tiled detection. Tiled detection was investigated to improve localization of small and thin filaments, but achieved a slightly lower PQ (0.29) and therefore was not adopted as the final pipeline.
+
+**Final pipeline:**
+
+**2048×2048 image → Solar disk isolation + CLAHE → YOLO11M full-image detection → 20% padded crops → U-Net ResNet34 5-fold ensemble → Probability averaging → Thresholding → Panoptic Painting → RLE/CSV**
+
+### Key Findings
+* **Instance-Level Bottleneck & Baselines:** Initial full-image $512 \times 512$ U-Net segmentation achieved high pixel-level metrics (~0.70 Dice) but a poor **0.01 PQ**, demonstrating that instance-level detection and localization—rather than basic pixel classification—represent the primary performance bottleneck[cite: 1, 2].
+* **Two-Stage Pipeline & ROI Segmentation:** Integrating **YOLO-based instance detection** with ROI-based U-Net segmentation substantially improved competition scores when accurate bounding boxes were provided[cite: 1, 2].
+* **Backbone Selection & Post-Processing:** The **ResNet34** backbone outperformed heavier alternatives like **EfficientNet-B4**, offering an optimal balance between segmentation quality and computational cost[cite: 1, 2]. In contrast, Test Time Augmentation (TTA) and coarse morphological post-processing failed to improve and often reduced the final Kaggle PQ[cite: 1, 2].
+* **Cross-Validation & Ensembling:** A **5-fold U-Net ensemble** reduced dependence on single models and improved robustness by averaging probability maps, despite noticeable performance variations across individual folds[cite: 1, 2].
+* **YOLO Configurations & Resolutions:** **YOLO11M** outperformed YOLO11L under the tested configurations[cite: 1]. Increasing YOLO resolution from 1280 to 2048 did not improve PQ[cite: 1], but refining training schedules and hyperparameters (such as updating the optimizer for YOLO11L) raised results from 0.26 to 0.28[cite: 1]. Additionally, tiled YOLO detection/training was explored to better preserve small structures, achieving competitive scores around **0.29 PQ**[cite: 1, 2].
+* **Remaining Limitations:** The primary remaining challenge is **detector recall**, particularly when attempting to capture thin, faint, and low-contrast filaments[cite: 2].
+
+## Results on test images
+
+<img src="./images/test_set.png" alt="Test images examples">
+
+## Future Work
+
+1. **Improve detector recall**  
+   Investigate stronger data augmentation, hard-negative mining and multi-scale training.
+
+2. **Improve thin and low-contrast filament detection**  
+   Develop preprocessing and training strategies specifically targeting difficult filament structures.
+
+3. **Improve instance separation**  
+   Reduce split and merge errors between nearby or touching filaments.
+
+4. **Explore stronger detection architectures**  
+   Investigate DETR, RT-DETR and other transformer-based detectors, as well as oriented bounding boxes.
+
+5. **Explore stronger segmentation backbones**  
+   Evaluate modern architectures such as ConvNeXt, Swin Transformer and other high-capacity segmentation models.
+
+6. **Exploit temporal information**  
+   Consecutive solar observations could provide useful temporal priors for detecting and tracking filaments.
+
+7. **Improve post-processing**  
+   Investigate instance-aware refinement, geometric constraints and more sophisticated mask separation instead of relying primarily on thresholding and Panoptic Painting.
+
+> **Conclusion:** The final system uses a two-stage **YOLO11M + U-Net ResNet34 ensemble** pipeline operating on the original 2048×2048 solar images. The best achieved Kaggle performance was approximately **0.30 PQ**. Tiled detection was evaluated as an alternative but did not outperform the full-image approach.
