@@ -56,7 +56,7 @@ Exploratory Data Analysis (EDA) revealed a wide filament area distribution rangi
 1. **Receptive Field Selection:** The presence of large structures up to ~37k pixels necessitated architectures capable of capturing broad context, guiding our choice toward dense prediction models with large receptive fields, such as U-Net.
 2. **Avoiding Resolution Loss:** Analyzing the size distribution proved critical in preventing suboptimal preprocessing choices. Since native H-Alpha images are 2048×2048 pixels, aggressive downscaling (e.g., resizing to 640×640, commonly used in object detection pipelines) would severely compress small targets—such as $P_1$ instances around 209 pixels—leading to an irreversible loss of fine-scale morphological details (e.g., filament barbs). Preserving high-resolution inputs was therefore essential for accurate segmentation.
 
-![Number of annotations per image](./images/filaments_number_distribution.png){width=70% fig-align="center"}
+![Number of annotations per image](./images/filaments_number_distribution.png){width=50% fig-align="center"}
 
 | Metric / Interaction Type | Count / Statistics | Percentage / Proportion |
 | :--- | :---: | :---: |
