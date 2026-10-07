@@ -205,6 +205,10 @@ The best-performing configuration used **full-image YOLO11M detection** rather t
 * **YOLO Configurations & Resolutions:** **YOLO11M** outperformed YOLO11L under the tested configurations[cite: 1]. Increasing YOLO resolution from 1280 to 2048 did not improve PQ[cite: 1], but refining training schedules and hyperparameters (such as updating the optimizer for YOLO11L) raised results from 0.26 to 0.28[cite: 1]. Additionally, tiled YOLO detection/training was explored to better preserve small structures, achieving competitive scores around **0.29 PQ**[cite: 1, 2].
 * **Remaining Limitations:** The primary remaining challenge is **detector recall**, particularly when attempting to capture thin, faint, and low-contrast filaments[cite: 2].
 
+## Results on test images
+
+<img src="./images/test_set.png" alt="Test images examples">
+
 ## Future Work
 
 1. **Improve detector recall**  
