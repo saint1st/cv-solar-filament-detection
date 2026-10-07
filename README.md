@@ -188,36 +188,44 @@ The project evolved from a full-image semantic segmentation baseline into a two-
 
 > **Best confirmed Kaggle score: ~0.30**
 
-## 1. Full-Image U-Net Baseline
+<img src="./images/pipeline.png" alt="Training images examples">
 
-The first approach treated the problem as semantic segmentation:
 
-```text
-2048×2048 image
-      ↓
-resize to 512×512
-      ↓
-U-Net
-      ↓
-binary probability mask
-      ↓
-threshold
-      ↓
-Connected Components
-      ↓
-instance masks
-      ↓
-RLE submission
-```
+The best-performing configuration used **full-image YOLO11M detection** rather than tiled detection. Tiled detection was investigated to improve localization of small and thin filaments, but achieved a slightly lower PQ (0.29) and therefore was not adopted as the final pipeline.
 
-## Main Findings
- 1. Instance-level detection is the main bottleneck, not basic pixel segmentation.
- 2. Full-image 512×512 segmentation loses too much spatial information for thin filaments.
- 3. ROI-based U-Net segmentation works substantially better when the detector provides accurate boxes.
- 4. ResNet34 outperformed the heavier EfficientNet-B4 in the complete pipeline.
- 5. TTA and coarse morphological post-processing reduced Kaggle PQ rather than improving it.
- 6. 5-fold training reduces dependence on a single segmentation model, although fold performance varies considerably.
- 7. YOLO11M outperformed YOLO11L under the tested configurations.
- 8. Increasing YOLO resolution from 1280 to 2048 did not improve PQ.
- 9. Training configuration matters: YOLO11L improved from 0.26 to 0.28 after changing the training schedule and optimizer.
- 10. The current direction is tiled detection, aimed specifically at preserving spatial detail for small and thin filaments.
+**Final pipeline:**
+
+**2048×2048 image → Solar disk isolation + CLAHE → YOLO11M full-image detection → 20% padded crops → U-Net ResNet34 5-fold ensemble → Probability averaging → Thresholding → Panoptic Painting → RLE/CSV**
+
+### Key Findings
+* **Instance-Level Bottleneck & Baselines:** Initial full-image $512 \times 512$ U-Net segmentation achieved high pixel-level metrics (~0.70 Dice) but a poor **0.01 PQ**, demonstrating that instance-level detection and localization—rather than basic pixel classification—represent the primary performance bottleneck[cite: 1, 2].
+* **Two-Stage Pipeline & ROI Segmentation:** Integrating **YOLO-based instance detection** with ROI-based U-Net segmentation substantially improved competition scores when accurate bounding boxes were provided[cite: 1, 2].
+* **Backbone Selection & Post-Processing:** The **ResNet34** backbone outperformed heavier alternatives like **EfficientNet-B4**, offering an optimal balance between segmentation quality and computational cost[cite: 1, 2]. In contrast, Test Time Augmentation (TTA) and coarse morphological post-processing failed to improve and often reduced the final Kaggle PQ[cite: 1, 2].
+* **Cross-Validation & Ensembling:** A **5-fold U-Net ensemble** reduced dependence on single models and improved robustness by averaging probability maps, despite noticeable performance variations across individual folds[cite: 1, 2].
+* **YOLO Configurations & Resolutions:** **YOLO11M** outperformed YOLO11L under the tested configurations[cite: 1]. Increasing YOLO resolution from 1280 to 2048 did not improve PQ[cite: 1], but refining training schedules and hyperparameters (such as updating the optimizer for YOLO11L) raised results from 0.26 to 0.28[cite: 1]. Additionally, tiled YOLO detection/training was explored to better preserve small structures, achieving competitive scores around **0.29 PQ**[cite: 1, 2].
+* **Remaining Limitations:** The primary remaining challenge is **detector recall**, particularly when attempting to capture thin, faint, and low-contrast filaments[cite: 2].
+
+## Future Work
+
+1. **Improve detector recall**  
+   Investigate stronger data augmentation, hard-negative mining and multi-scale training.
+
+2. **Improve thin and low-contrast filament detection**  
+   Develop preprocessing and training strategies specifically targeting difficult filament structures.
+
+3. **Improve instance separation**  
+   Reduce split and merge errors between nearby or touching filaments.
+
+4. **Explore stronger detection architectures**  
+   Investigate DETR, RT-DETR and other transformer-based detectors, as well as oriented bounding boxes.
+
+5. **Explore stronger segmentation backbones**  
+   Evaluate modern architectures such as ConvNeXt, Swin Transformer and other high-capacity segmentation models.
+
+6. **Exploit temporal information**  
+   Consecutive solar observations could provide useful temporal priors for detecting and tracking filaments.
+
+7. **Improve post-processing**  
+   Investigate instance-aware refinement, geometric constraints and more sophisticated mask separation instead of relying primarily on thresholding and Panoptic Painting.
+
+> **Conclusion:** The final system uses a two-stage **YOLO11M + U-Net ResNet34 ensemble** pipeline operating on the original 2048×2048 solar images. The best achieved Kaggle performance was approximately **0.30 PQ**. Tiled detection was evaluated as an alternative but did not outperform the full-image approach.
