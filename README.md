@@ -1,10 +1,13 @@
 # cv-solar-filament-detection
 A machine learning pipeline for solar filament detection, built as part of a Kaggle competition
 
-# Automated Segmentation of Solar Filaments
+# Solar Filaments Segmentation Challenge
 
 ## Overview
-This repository contains the source code and machine learning pipeline developed for the Kaggle challenge on automated solar filament segmentation. The objective of this project is to generate highly accurate, pixel-level segmentation masks from H-Alpha solar observations. 
+This repository contains the source code and machine learning pipeline developed for the Kaggle challenge on [solar filament segmentation](https://www.kaggle.com/competitions/filament-segmentation-2026/overview). 
+
+
+The objective of this project is to generate highly accurate, pixel-level segmentation masks from H-Alpha solar observations. 
 
 Accurate detection of solar filaments is critical for space weather research, as they are at the core of solar eruptions such as Coronal Mass Ejections (CMEs) and solar flares.
 
