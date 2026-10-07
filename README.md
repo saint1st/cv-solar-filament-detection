@@ -57,6 +57,7 @@ Exploratory Data Analysis (EDA) revealed a wide filament area distribution rangi
 2. **Avoiding Resolution Loss:** Analyzing the size distribution proved critical in preventing suboptimal preprocessing choices. Since native H-Alpha images are 2048×2048 pixels, aggressive downscaling (e.g., resizing to 640×640, commonly used in object detection pipelines) would severely compress small targets—such as $P_1$ instances around 209 pixels—leading to an irreversible loss of fine-scale morphological details (e.g., filament barbs). Preserving high-resolution inputs was therefore essential for accurate segmentation.
 
 <img src="./images/filaments_number_distribution.png" alt="Training images examples" width="600">
+
 | Metric / Interaction Type | Count / Statistics | Percentage / Proportion |
 | :--- | :---: | :---: |
 | **Total images with $\ge 2$ filaments** | 1,051 | 91.1% |
@@ -67,6 +68,7 @@ Exploratory Data Analysis (EDA) revealed a wide filament area distribution rangi
 
 
 To evaluate the structural characteristics of solar filaments, I conducted a geometric analysis of individual instances, calculating metrics such as **Solidity** (the ratio of the filament mask area to its convex hull area) and performing **skeletonization** to extract core spines and branching features.
+
 
 ![Geometrical mask analysis](./images/geometry1.png){width=70% fig-align="center"}
 ![Geometrical mask analysis](./images/geometry2.png){width=70% fig-align="center"}
@@ -89,8 +91,8 @@ As illustrated in the exploratory analysis:
 | **95%** | 7,336.7 | 3.34 | 1,026.6 | 0.89 | 487.1 |
 | **Max** | 39,145.0 | 12.78 | 3,047.5 | 1.00 | 1,777.0 |
 
-![Training images examples](./images/output.png){width=70% fig-align="center"}
 
+<img src="./images/output.png" alt="Training images examples" width="600">
 To further investigate dataset characteristics, we performed bivariate log-log scale analyses correlating mask area with aspect ratio and skeleton length (as shown above):
 
 1. **Area vs. Aspect Ratio (Symmetry & Orientation):**
@@ -107,15 +109,16 @@ An analysis of foreground occupancy per image ($2048 \times 2048 = 4,194,304$ to
 
 - **The Problem:** Using standard Binary Cross-Entropy (BCE) loss alone causes the model to collapse by trivially predicting all-background masks.
 - **The Solution:** We employed composite loss functions combining BCE with regional/overlap metrics—such as **BCE+Dice**, **BCE+Tversky**, or **Focal+Dice**.
-![Training images examples](./images/pixel_occupancy.png){width=70% fig-align="center"}
+
+<img src="./images/pixel_occupancy.png" alt="Training images examples" width="600">
 
 Sampling intensity distributions ($N = 100$ images) across the 0–255 grayscale range demonstrated significant intensity overlap between background pixels and ground-truth filaments.
 
 - **Background vs. Foreground:** While the sharp spike near intensity 0 represents the black space vacuum outside the solar disk, filament pixel intensities heavily overlap with the broader solar disk background (Mean ~83 for background vs. ~117 for filaments).
 - **Failure of Thresholding:** This significant overlap proves that global thresholding methods (like Otsu's method) or traditional edge detectors (like Canny) are entirely ineffective.
 - **Preprocessing Strategy:** Consequently, we integrated **CLAHE (Contrast Limited Adaptive Histogram Equalization)** to boost local edge definitions prior to model training.
-![Training images examples](./images/intencity.png){width=70% fig-align="center"}
 
+<img src="./images/intencity.png" alt="Training images examples" width="600">
 
 Temporal Analysis & Sampling Distribution
 
@@ -137,8 +140,8 @@ To ensure that the training set shares the same underlying photometric distribut
 - **ROC-AUC Score:** **0.559**
 - **Interpretation:** A score close to 0.50 indicates that the classifier is essentially guessing at random and cannot reliably differentiate between training and test frames. 
 - **Conclusion:** **No severe covariate shift was detected.** As confirmed by the overlapping feature histograms (Mean and Std Intensity), the training and test sets are identically distributed, ensuring that models trained on the training split will generalize reliably to the test environment.
-![Training images examples](./images/std.png){width=70% fig-align="center"}
 
+<img src="./images/std.png" alt="Training images examples" width="600">
 
 Duplicate Analysis & Annotation Fusion
 
