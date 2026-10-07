@@ -132,7 +132,6 @@ Covariate Shift & Adversarial Validation
 
 To ensure that the training set shares the same underlying photometric distribution as the test set, we performed an **Adversarial Validation** experiment. 
 
-### Methodology
 1. **Feature Extraction:** Extracted low-level image intensity statistics (mean, standard deviation, and percentiles $P_1, P_50, P_99$) from all training and test images.
 2. **Classifier Training:** Trained a Random Forest classifier to distinguish between train ($y=0$) and test ($y=1$) samples using 5-fold cross-validation.
 
@@ -147,7 +146,6 @@ Duplicate Analysis & Annotation Fusion
 
 An exhaustive duplicate analysis using byte-level MD5 hashing and timestamp prefix matching revealed significant redundancy in the dataset.
 
-### Summary of Findings
 - **Exact MD5 Byte-Level Duplicates:** 743 images mapped across 296 unique groups.
 - **Identical Timestamp Prefixes:** 743 images matching across 296 unique groups, indicating that multiple records shared identical raw data.
 - **Dataset Cleansing (Annotation Fusion):** By fusing annotations across duplicate image records and selecting a primary clean frame for each hash group, the training dataset was successfully condensed from **1,154 raw images down to 707 clean, unique frames** while preserving all 8,199 filament annotations.
@@ -167,6 +165,63 @@ To prevent severe data leakage caused by near-identical frames and multiple over
 - **Architecture:** Implemented a [insert model name, e.g., U-Net / YOLOv8] tailored for semantic segmentation of fine-scale structures.
 - **Preprocessing:** Applied [insert techniques] to suppress background noise and enhance image quality.
 - **Post-processing:** Leveraged [insert techniques, e.g., morphological operations] to enforce structural continuity and minimize over-merging.
+
+## Model & Experiment Summary
+
+The project evolved from a full-image semantic segmentation baseline into a two-stage **YOLO → U-Net instance segmentation pipeline**. The main evaluation metric is **Panoptic Quality (PQ)** on the Kaggle leaderboard.
+
+### Kaggle Results
+
+| # | Model / Method | Input / Resolution | Training / Inference Setup | Kaggle PQ |
+|---|---|---|---|---:|
+| 1 | **U-Net ResNet34** | Full 2048×2048 → 512×512 | BCE + Dice, thresholding + Connected Components | **0.01** |
+| 2 | **Oracle GT BBox + U-Net ResNet34** | GT crop → 512×512 | Ground-truth boxes used for cropping; masks pasted back to 2048×2048 | Local validation only |
+| 3 | **YOLO + U-Net ResNet34** | 2048 → YOLO 1280 → crop 512 | Two-stage detection + segmentation | **~0.30** |
+| 4 | **YOLO + U-Net EfficientNet-B4** | YOLO 1280 + crop 512 | Heavier segmentation backbone | **0.26** |
+| 5 | **YOLO + U-Net ResNet34 + TTA** | YOLO 1280 + crop 512 | Horizontal + vertical flip TTA | **~0.26** |
+| 6 | **YOLO + U-Net ResNet34 + Morphology** | YOLO 1280 + crop 512 | 5×5 morphological hole filling | **~0.26** |
+| 7 | **YOLO11M + U-Net ResNet34** | 1280 + crop 512 | 5-fold U-Net ensemble, confidence threshold 0.30 | **0.29** |
+| 8 | **YOLO11M, Fold 0** | 1280 | Single U-Net fold | **0.15** |
+| 9 | **YOLO11M, Fold 1** | 1280 | Single U-Net fold | **0.29** |
+| 10 | **YOLO11M, Fold 2** | 1280 | Single U-Net fold | **0.27** |
+| 11 | **YOLO11M, Fold 3** | 1280 | Single U-Net fold | **0.25** |
+| 12 | **YOLO11M, Fold 4** | 1280 | Single U-Net fold | **0.22** |
+| 13 | **YOLO11M + lower detector confidence** | 1280 | Confidence = 0.10 | **0.19** |
+| 14 | **YOLO11M + lower detector confidence** | 1280 | Confidence = 0.20 | **0.24** |
+| 15 | **YOLO11M + detector confidence** | 1280 | Confidence = 0.30 | **~0.29** |
+| 16 | **YOLO11M + detector confidence** | 1280 | Confidence = 0.35 | **0.28** |
+| 17 | **YOLO11L** | 1280 | 30 epochs, `optimizer=auto` | **0.26** |
+| 18 | **YOLO11L** | 1536 | 30 epochs, `optimizer=auto` | Not submitted |
+| 19 | **YOLO11L** | 2048 | 30 epochs, `optimizer=auto` | **0.25** |
+| 20 | **YOLO11L** | 1280 | 50 epochs, AdamW, LR = 1e-3 | **0.28** |
+| 21 | **YOLO11M tiled** | 1024×1024 tiles | 20% overlap, tiled training/inference | In progress |
+
+> **Best confirmed Kaggle score: ~0.30**
+
+---
+
+## 1. Full-Image U-Net Baseline
+
+The first approach treated the problem as semantic segmentation:
+
+```text
+2048×2048 image
+      ↓
+resize to 512×512
+      ↓
+U-Net
+      ↓
+binary probability mask
+      ↓
+threshold
+      ↓
+Connected Components
+      ↓
+instance masks
+      ↓
+RLE submission
+
+
 
 ## Evaluation Metrics
 The pipeline is evaluated based on the competition's strict criteria:
