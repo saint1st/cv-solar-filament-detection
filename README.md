@@ -3,9 +3,22 @@ A machine learning pipeline for solar filament detection, built as part of a Kag
 
 # Solar Filaments Segmentation Challenge
 
+Solar filaments are dense, relatively cool "clouds" of solar material (plasma) that are suspended above the Sun's surface by powerful magnetic field lines.
+
+1. The Visual Appearance
+Even though they are extremely hot, filaments are cooler than the solar surface (photosphere) below them. When viewed through specific wavelengths (like the H-Alpha observations in the MAGFiLO dataset), they absorb the light from below and appear as dark, thread-like streaks or ribbons across the Sun's bright disk. If you view a filament on the edge of the Sun against the blackness of space, it glows bright red—in that position, it is called a solar prominence.
+
+2. The Danger (Space Weather)
+Filaments are highly volatile. When the magnetic fields holding them become unstable, they can erupt, violently throwing billions of tons of plasma into space. This is known as a Coronal Mass Ejection (CME). If an Earth-directed CME hits our magnetic field, it can:
+
+ - Overload and destroy electric power grids.
+ - Disrupt GPS navigation and satellite communications.
+ - Expose astronauts and passengers on high-altitude polar flights to dangerous levels of radiation.
+
+In computer vision, tracking them is exceptionally difficult. Filaments are not solid, geometric shapes. They feature barbs (thin, wispy threads branching off the main body) and often look fragmented or obscured by the background noise of ground-based telescopes. Your segmentation model is designed to accurately capture these complex, irregular boundaries pixel-by-pixel so scientists can monitor their stability.
+
 ## Overview
 This repository contains the source code and machine learning pipeline developed for the Kaggle challenge on [solar filament segmentation](https://www.kaggle.com/competitions/filament-segmentation-2026/overview). 
-
 
 The objective of this project is to generate highly accurate, pixel-level segmentation masks from H-Alpha solar observations. 
 
