@@ -186,8 +186,6 @@ The project evolved from a full-image semantic segmentation baseline into a two-
 
 > **Best confirmed Kaggle score: ~0.30**
 
----
-
 ## 1. Full-Image U-Net Baseline
 
 The first approach treated the problem as semantic segmentation:
@@ -208,8 +206,19 @@ Connected Components
 instance masks
       ↓
 RLE submission
+```
 
-
+## Main Findings
+ 1. Instance-level detection is the main bottleneck, not basic pixel segmentation.
+ 2. Full-image 512×512 segmentation loses too much spatial information for thin filaments.
+ 3. ROI-based U-Net segmentation works substantially better when the detector provides accurate boxes.
+ 4. ResNet34 outperformed the heavier EfficientNet-B4 in the complete pipeline.
+ 5. TTA and coarse morphological post-processing reduced Kaggle PQ rather than improving it.
+ 6. 5-fold training reduces dependence on a single segmentation model, although fold performance varies considerably.
+ 7. YOLO11M outperformed YOLO11L under the tested configurations.
+ 8. Increasing YOLO resolution from 1280 to 2048 did not improve PQ.
+ 9. Training configuration matters: YOLO11L improved from 0.26 to 0.28 after changing the training schedule and optimizer.
+ 10. The current direction is tiled detection, aimed specifically at preserving spatial detail for small and thin filaments.
 
 ## Evaluation Metrics
 The pipeline is evaluated based on the competition's strict criteria:
@@ -217,11 +226,3 @@ The pipeline is evaluated based on the competition's strict criteria:
 - **Dice Score & IoU:** Utilized (`torchmetrics.segmentation.DiceScore`) to quantify the exact overlap between predicted and ground-truth masks.
 - **Fragmentation Penalties:** The evaluation penalizes one-to-many and many-to-one mapping errors.
 
-## Repository Structure
-```text
-├── data/                   # Directory for MAGFiLO test/train datasets
-├── notebooks/              # Jupyter notebooks illustrating the entire pipeline
-├── src/                    # Source code for training and inference
-├── requirements.txt        # Utilized packages and their corresponding versions
-├── technical_report.pdf    # Detailed 4-page technical report of the methodology
-└── README.md
